@@ -1,47 +1,41 @@
-import sqlite3 from "sqlite3"
-import { open } from "sqlite"
+import { sql } from '@vercel/postgres';
 
-let db: any = null
-
-export async function getDb() {
-  if (!db) {
-    db = await open({
-      filename: "./database.sqlite",
-      driver: sqlite3.Database,
-    })
-
-    await db.exec(`
+export async function initDb() {
+  try {
+    await sql`
       CREATE TABLE IF NOT EXISTS clients (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         name TEXT,
         company TEXT,
         email TEXT,
         phone TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
 
       CREATE TABLE IF NOT EXISTS deals (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        client_id INTEGER,
+        id SERIAL PRIMARY KEY,
+        client_id INTEGER REFERENCES clients(id),
         title TEXT,
-        value REAL,
+        value DECIMAL,
         stage TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (client_id) REFERENCES clients(id)
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
 
       CREATE TABLE IF NOT EXISTS activities (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        client_id INTEGER,
-        deal_id INTEGER,
+        id SERIAL PRIMARY KEY,
+        client_id INTEGER REFERENCES clients(id),
+        deal_id INTEGER REFERENCES deals(id),
         type TEXT,
         description TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (client_id) REFERENCES clients(id),
-        FOREIGN KEY (deal_id) REFERENCES deals(id)
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
-    `)
+    `;
+    console.log('Database tables created successfully');
+  } catch (error) {
+    console.error('Error initializing database:', error);
+    throw error;
   }
-  return db
 }
+
+export { sql as db };
 

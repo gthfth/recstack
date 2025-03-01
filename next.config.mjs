@@ -16,10 +16,16 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // Set output to standalone for better Vercel compatibility
+  output: 'standalone',
+  // Reduce static generation timeouts
+  staticPageGenerationTimeout: 120,
   experimental: {
     webpackBuildWorker: true,
     parallelServerBuildTraces: true,
     parallelServerCompiles: true,
+    // Improve handling of server components
+    serverComponentsExternalPackages: [],
   },
 }
 

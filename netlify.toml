@@ -1,0 +1,10 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  AIRTABLE_API_KEY = "pat8EC2XMRrcKGX6W.e76aa846cea0140359a76bfdd5e8df0e8e4a33268f1a909fc7f970b0cc057034"
+  AIRTABLE_BASE_ID = "appmOqfYYJzROi9Yx"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs" 

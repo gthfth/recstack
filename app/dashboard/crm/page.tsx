@@ -1,15 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ClientList } from "@/components/ClientList"
-import { DealList } from "@/components/DealList"
-import { ActivityFeed } from "@/components/ActivityFeed"
+import DealList from "@/components/DealList"
+import ActivityFeed from "@/components/ActivityFeed"
 import { EmailSender } from "@/components/EmailSender"
-import { getRecords } from "@/lib/airtable"
 import { TestEmailSender } from "@/components/TestEmailSender"
+import { getDealsData } from "@/lib/actions"
 
 export default async function CRMPage() {
-  const deals = await getRecords("Deals")
-  const totalPipeline = deals.reduce((sum, deal) => sum + (Number.parseFloat(deal.value) || 0), 0)
+  const { deals, totalPipeline } = await getDealsData()
 
   return (
     <div className="flex flex-col gap-4 p-4 md:gap-8 md:p-8">

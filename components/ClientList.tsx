@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import type { QueryResultRow } from '@vercel/postgres'
 
 import { useState, useEffect } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -8,9 +9,19 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { PlusCircle, Mail } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
+import { addClient, getClientsData } from "@/lib/actions"
+
+interface Client extends QueryResultRow {
+  id: number
+  name: string
+  company: string
+  email: string
+  phone: string
+  created_at: string
+}
 
 export function ClientList() {
-  const [clients, setClients] = useState([])
+  const [clients, setClients] = useState<Client[]>([])
   const [newClient, setNewClient] = useState({ name: "", company: "", email: "", phone: "" })
   const { toast } = useToast()
 
@@ -19,29 +30,20 @@ export function ClientList() {
   }, [])
 
   const fetchClients = async () => {
-    const response = await fetch("/api/clients")
-    const data = await response.json()
-    setClients(data)
+    const { clients } = await getClientsData()
+    setClients(clients as Client[])
   }
 
   const handleAddClient = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const response = await fetch("/api/clients", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newClient),
-      })
-      if (response.ok) {
-        toast({ title: "Client added successfully" })
-        setNewClient({ name: "", company: "", email: "", phone: "" })
-        fetchClients()
-      } else {
-        toast({ title: "Failed to add client", variant: "destructive" })
-      }
+      await addClient(newClient)
+      toast({ title: "Client added successfully" })
+      setNewClient({ name: "", company: "", email: "", phone: "" })
+      fetchClients()
     } catch (error) {
       console.error("Error adding client:", error)
-      toast({ title: "Error adding client", variant: "destructive" })
+      toast({ title: "Failed to add client", variant: "destructive" })
     }
   }
 
@@ -91,7 +93,7 @@ export function ClientList() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {clients.map((client: any) => (
+          {clients.map((client) => (
             <TableRow key={client.id}>
               <TableCell>{client.name}</TableCell>
               <TableCell>{client.company}</TableCell>

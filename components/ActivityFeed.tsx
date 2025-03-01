@@ -1,140 +1,172 @@
 "use client"
 
-import type React from "react"
+import { useState } from 'react'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Select } from '@/components/ui/select'
+import { toast } from 'sonner'
+import { addActivity } from '@/lib/actions'
+import { fetchActivityFeedData } from './ActivityFeedServer'
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { PlusCircle } from "lucide-react"
-import { useToast } from "@/components/ui/use-toast"
+interface Activity {
+  id: string
+  type: string
+  description: string
+  client_id: string
+  deal_id: string
+  created_at: string
+}
 
-export function ActivityFeed() {
-  const [activities, setActivities] = useState([])
-  const [newActivity, setNewActivity] = useState({ type: "", description: "", client_id: "", deal_id: "" })
-  const [clients, setClients] = useState([])
-  const [deals, setDeals] = useState([])
-  const { toast } = useToast()
+interface Client {
+  id: string
+  name: string
+}
 
-  useEffect(() => {
-    fetchActivities()
-    fetchClients()
-    fetchDeals()
-  }, [])
+interface Deal {
+  id: string
+  title: string
+}
 
-  const fetchActivities = async () => {
-    const response = await fetch("/api/activities")
-    const data = await response.json()
-    setActivities(data)
-  }
+export default function ActivityFeed() {
+  const [newActivity, setNewActivity] = useState({
+    type: 'Call',
+    description: '',
+    client_id: '',
+    deal_id: ''
+  })
+  const [activities, setActivities] = useState<Activity[]>([])
+  const [clients, setClients] = useState<Client[]>([])
+  const [deals, setDeals] = useState<Deal[]>([])
 
-  const fetchClients = async () => {
-    const response = await fetch("/api/clients")
-    const data = await response.json()
-    setClients(data)
-  }
-
-  const fetchDeals = async () => {
-    const response = await fetch("/api/deals")
-    const data = await response.json()
-    setDeals(data)
+  const fetchData = async () => {
+    try {
+      const data = await fetchActivityFeedData()
+      setActivities(data.activities)
+      setClients(data.clients)
+      setDeals(data.deals)
+    } catch (error) {
+      console.error('Error fetching data:', error)
+      toast.error('Failed to fetch data')
+    }
   }
 
   const handleAddActivity = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const response = await fetch("/api/activities", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newActivity),
+      await addActivity({
+        ...newActivity,
+        client_id: Number(newActivity.client_id),
+        deal_id: Number(newActivity.deal_id)
       })
-      if (response.ok) {
-        toast({ title: "Activity added successfully" })
-        setNewActivity({ type: "", description: "", client_id: "", deal_id: "" })
-        fetchActivities()
-      } else {
-        toast({ title: "Failed to add activity", variant: "destructive" })
-      }
+      setNewActivity({
+        type: 'Call',
+        description: '',
+        client_id: '',
+        deal_id: ''
+      })
+      toast.success('Activity added successfully')
+      fetchData()
     } catch (error) {
-      console.error("Error adding activity:", error)
-      toast({ title: "Error adding activity", variant: "destructive" })
+      console.error('Error adding activity:', error)
+      toast.error('Failed to add activity')
     }
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Recent Activities</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleAddActivity} className="mb-4 flex gap-2">
-          <Select value={newActivity.type} onValueChange={(value) => setNewActivity({ ...newActivity, type: value })}>
-            <SelectTrigger>
-              <SelectValue placeholder="Type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Call">Call</SelectItem>
-              <SelectItem value="Email">Email</SelectItem>
-              <SelectItem value="Meeting">Meeting</SelectItem>
-              <SelectItem value="Task">Task</SelectItem>
-            </SelectContent>
+    <div className="space-y-4">
+      <form onSubmit={handleAddActivity} className="flex gap-4 items-end">
+        <div className="flex-1">
+          <label className="block text-sm font-medium mb-1">Type</label>
+          <Select
+            value={newActivity.type}
+            onValueChange={(value) => setNewActivity({ ...newActivity, type: value })}
+          >
+            <option value="Call">Call</option>
+            <option value="Email">Email</option>
+            <option value="Meeting">Meeting</option>
+            <option value="Note">Note</option>
           </Select>
+        </div>
+        <div className="flex-1">
+          <label className="block text-sm font-medium mb-1">Description</label>
           <Input
-            placeholder="Description"
             value={newActivity.description}
             onChange={(e) => setNewActivity({ ...newActivity, description: e.target.value })}
             required
           />
+        </div>
+        <div className="flex-1">
+          <label className="block text-sm font-medium mb-1">Client</label>
           <Select
             value={newActivity.client_id}
             onValueChange={(value) => setNewActivity({ ...newActivity, client_id: value })}
           >
-            <SelectTrigger>
-              <SelectValue placeholder="Client" />
-            </SelectTrigger>
-            <SelectContent>
-              {clients.map((client: any) => (
-                <SelectItem key={client.id} value={client.id}>
-                  {client.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
+            <option value="">Select a client</option>
+            {clients.map((client) => (
+              <option key={client.id} value={client.id}>
+                {client.name}
+              </option>
+            ))}
           </Select>
+        </div>
+        <div className="flex-1">
+          <label className="block text-sm font-medium mb-1">Deal</label>
           <Select
             value={newActivity.deal_id}
             onValueChange={(value) => setNewActivity({ ...newActivity, deal_id: value })}
           >
-            <SelectTrigger>
-              <SelectValue placeholder="Deal" />
-            </SelectTrigger>
-            <SelectContent>
-              {deals.map((deal: any) => (
-                <SelectItem key={deal.id} value={deal.id}>
-                  {deal.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
+            <option value="">Select a deal</option>
+            {deals.map((deal) => (
+              <option key={deal.id} value={deal.id}>
+                {deal.title}
+              </option>
+            ))}
           </Select>
-          <Button type="submit">
-            <PlusCircle className="mr-2 h-4 w-4" /> Log Activity
-          </Button>
-        </form>
-        {activities.map((activity: any) => (
-          <div key={activity.id} className="mb-4 pb-4 border-b last:border-b-0">
-            <p className="font-semibold">{activity.type}</p>
-            <p>{activity.description}</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              {clients.find((c) => c.id === activity.client_id)?.name &&
-                `Client: ${clients.find((c) => c.id === activity.client_id)?.name}`}
-              {deals.find((d) => d.id === activity.deal_id)?.title &&
-                ` | Deal: ${deals.find((d) => d.id === activity.deal_id)?.title}`}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">{new Date(activity.created_at).toLocaleString()}</p>
-          </div>
-        ))}
-      </CardContent>
-    </Card>
+        </div>
+        <Button type="submit">Add Activity</Button>
+      </form>
+
+      <div className="border rounded-lg overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Type
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Description
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Client
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Deal
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Created At
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {activities.map((activity) => (
+              <tr key={activity.id}>
+                <td className="px-6 py-4 whitespace-nowrap">{activity.type}</td>
+                <td className="px-6 py-4 whitespace-nowrap">{activity.description}</td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {clients.find((c) => c.id === activity.client_id)?.name}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {deals.find((d) => d.id === activity.deal_id)?.title}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {new Date(activity.created_at).toLocaleDateString()}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   )
 }
 
